@@ -3,8 +3,10 @@ package main
 import (
 	"log"
 	"os"
-	"strconv"
+	"strings"
 	"time"
+
+	exec "github.com/pkg/exec"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -50,22 +52,26 @@ func exportActionsMetrics() {
 	// Set created metric
 	actionsCreatedMetric.Set(float64(time.Now().Unix()))
 
-	// Set check metrics for each subsystem
-	subsystems := []string{
-		"mssql", "mps_database", "mps_nomad_job", "mps_at_health_api",
-		"token_database", "token_nomad_job", "token_at_health_api",
-		"actions_database", "actions_nomad_job", "actions_at_health_api",
-		"artifactcache_database", "artifactcache_nomad_job", "artifactcache_at_health_api",
+	// Run ghe-actions-check command and parse output
+	output, err := exec.Command("/usr/local/bin/ghe-actions-check").Output()
+	if err != nil {
+		log.Printf("Error running ghe-actions-check: %v", err)
+		return
 	}
 
-	for _, subsystem := range subsystems {
-		value, err := strconv.ParseFloat(os.Getenv(subsystem), 64)
-		if err != nil {
-			log.Printf("Error parsing value for subsystem %s: %v", subsystem, err)
+	// Parse the output and set check metrics
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if line == "" {
 			continue
 		}
-		actionsCheckMetric.With(prometheus.Labels{"subsystem": subsystem}).Set(value)
+		parts := strings.Split(line, " ")
+		if len(parts) < 4 || parts[len(parts)-1] != "healthy!" {
+			log.Printf("Unexpected line format: %s", line)
+			continue
+		}
+
+		subsystem := strings.ToLower(strings.Join(parts[:len(parts)-3], "_"))
+		actionsCheckMetric.With(prometheus.Labels{"subsystem": subsystem}).Set(1)
 	}
 }
-
-// The main function is removed as it's now handled in the main.go file

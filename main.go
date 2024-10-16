@@ -49,12 +49,12 @@ func updateReplicationMetrics() {
 	}
 }
 
-func updateGovernorMetrics() {
-	for {
-		exportGovernorMetrics() // This function is defined in governor.go
-		time.Sleep(15 * time.Second)
-	}
-}
+// func updateGovernorMetrics() {
+// 	for {
+// 		exportGovernorMetrics() // This function is defined in governor.go
+// 		time.Sleep(15 * time.Second)
+// 	}
+// }
 
 func updateActionsMetrics() {
 	for {

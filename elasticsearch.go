@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -72,9 +74,20 @@ func exportElasticsearchMetrics() {
 }
 
 func fetchClusterHealth() (*ClusterHealth, error) {
-	// Implement the logic to fetch cluster health from Elasticsearch API
-	// This is a placeholder and needs to be implemented
-	return &ClusterHealth{}, nil
+	// Fetch cluster health from Elasticsearch API
+	resp, err := http.Get("http://localhost:9200/_cluster/health")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Decode JSON response into ClusterHealth struct
+	var health ClusterHealth
+	if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+		return nil, err
+	}
+
+	return &health, nil
 }
 
 func boolToFloat64(b bool) float64 {

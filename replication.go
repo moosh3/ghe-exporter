@@ -1,9 +1,11 @@
 package main
 
 import (
+	"log"
 	"os"
-	"time"
+	"strings"
 
+	"github.com/pkg/exec"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -44,7 +46,23 @@ func exportReplicationMetrics() {
 }
 
 func getSubsystemStatus(subsystem string) float64 {
-	// TODO: Implement actual status checking logic for each subsystem
-	// For now, we'll return a random value between 0 and 1
-	return float64(time.Now().UnixNano() % 2)
+	output, err := exec.Command("/usr/local/bin/ghe-repl-status").Output()
+	if err != nil {
+		log.Printf("Error running ghe-repl-status: %v", err)
+		return 0
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, subsystem) {
+			if strings.HasPrefix(line, "OK:") {
+				return 1
+			} else {
+				return 0
+			}
+		}
+	}
+
+	log.Printf("Subsystem %s not found in ghe-repl-status output", subsystem)
+	return 0
 }
